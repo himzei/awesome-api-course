@@ -16,7 +16,7 @@ class RoomsView(APIView):
         paginator.page_size = 20
         rooms = Room.objects.all()
         results = paginator.paginate_queryset(rooms, request)
-        serializer = RoomSerializer(results, many=True)
+        serializer = RoomSerializer(results, many=True, context={"request": request})
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
@@ -56,10 +56,10 @@ class RoomView(APIView):
         if room is not None:
             if room.user != request.user:
                 return Response(status=status.HTTP_403_FORBIDDEN)
-            serializer = WriteRoomSerializer(room, data=request.data, partial=True) 
+            serializer = RoomSerializer(room, data=request.data, partial=True) 
             if serializer.is_valid:
                 room = serializer.save()
-                return Response(ReadRoomSerializer(room).data)
+                return Response(RoomSerializer(room).data)
             else:
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
         else:
@@ -83,6 +83,8 @@ def room_search(request):
     beds = request.GET.get('beds', None) 
     bedrooms = request.GET.get('bedrooms', None) 
     bathrooms = request.GET.get('bathrooms', None) 
+    lat = request.GET.get('lat', None) 
+    lng = request.GET.get('lng', None) 
     filter_kwargs = {}
     if max_price is not None: 
         filter_kwargs["pirce__lte"] = max_price
@@ -95,6 +97,11 @@ def room_search(request):
     if bathrooms is not None: 
         filter_kwargs["bathrooms__gte"] = bathrooms 
     
+    if lat is not None or lng is not None:
+        filter_kwargs["lat__lte"] = float(lat)   - 0.005
+        filter_kwargs["lat__gte"] = float(lat)   + 0.005
+        filter_kwargs["lng__lte"] = float(lng)   - 0.005
+        filter_kwargs["lng__gte"] = float(lng)   + 0.005
 
     paginator = PageNumberPagination()
     paginator.page_size = 10 
