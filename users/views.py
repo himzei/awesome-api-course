@@ -42,21 +42,18 @@ class UsersViewSet(ModelViewSet):
             return Response(data={"token": encoded_jwt, "id": user.pk})
         else: 
             return Response(status=status.HTTP_401_UNAUTHORIZED)
-        
 
-
-class FavsView(APIView):
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        user = request.user 
+    @action(detail=True)
+    def favs(self, request, pk):
+        user = self.get_object()
         serializer = RoomSerializer(user.favs.all(), many=True).data
         return Response(serializer)
+    
 
-    def put(self, request):
+    @favs.mapping.put 
+    def toggle_favs(self, request, pk):
         pk = request.data.get("pk", None)
-        user = request.user
+        user = self.get_object()
         if pk is not None: 
             try:
                 room = Room.objects.get(pk=pk)
@@ -68,6 +65,9 @@ class FavsView(APIView):
             except Room.DoesNotExist:
                 pass 
         return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+        
 
 
 
